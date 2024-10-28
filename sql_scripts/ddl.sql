@@ -1,6 +1,6 @@
--- Snowflake SQL Solution for Engine AI Code Challenge
+-- Snowflake SQL script for calculating daily positions and metrics
 -- Author: Nelson Luna Silvestre
--- Description: Solution to calculate the daily position in USD, identify top 25% companies with the largest average position (USD) in the last year, and calculate daily sector position including weekends.
+-- Description: Script to calculate the daily position in USD, identify the top 25% of companies with the largest average position (USD) in the last year, and calculate daily sector positions including weekends.
 
 -- 1. Calculate the daily position in USD and materialize it for use in subsequent steps.
 -- DROP VIEW IF EXISTS daily_position_usd;

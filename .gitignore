@@ -67,3 +67,12 @@ htmlcov/
 
 # MacOS
 .DS_Store
+
+# Terraform
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+aws_credentials.txt
+
+# Terraform lock file
+.terraform.lock.hcl
