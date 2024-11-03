@@ -1,0 +1,118 @@
+name: CI/CD Pipeline for Market Dashboard
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          region: ${{ secrets.AWS_REGION }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t market_dashboard_app -f docker/Dockerfile .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker tag market_dashboard_app:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/market_dashboard_app:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/market_dashboard_app:latest
+
+  deploy_sql:
+    name: Deploy SQL Scripts to Snowflake
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Python and Snowflake Connector
+        run: |
+          python -m pip install --upgrade pip
+          pip install snowflake-connector-python
+
+      - name: Deploy SQL to Snowflake
+        env:
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+        run: |
+          python - <<EOF
+          import snowflake.connector
+
+          conn = snowflake.connector.connect(
+              user="${SNOWFLAKE_USER}",
+              password="${SNOWFLAKE_PASSWORD}",
+              account="${SNOWFLAKE_ACCOUNT}",
+              warehouse="${SNOWFLAKE_WAREHOUSE}",
+              database="${SNOWFLAKE_DATABASE}",
+              schema="${SNOWFLAKE_SCHEMA}"
+          )
+          cursor = conn.cursor()
+          with open('sql/ddl.sql', 'r') as f:
+              ddl = f.read()
+          cursor.execute(ddl)
+          cursor.close()
+          conn.close()
+          EOF
+
+  deploy_infra:
+    name: Deploy Infrastructure with Terraform
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set Terraform Environment Variables
+        run: |
+          echo "TF_VAR_aws_region=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+          echo "TF_VAR_vpc_id=${{ secrets.VPC_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_subnet_ids=${{ secrets.SUBNET_IDS }}" >> $GITHUB_ENV
+          echo "TF_VAR_security_group_id=${{ secrets.SECURITY_GROUP_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_s3_bucket=${{ secrets.S3_BUCKET }}" >> $GITHUB_ENV
+          echo "TF_VAR_dynamodb_table=${{ secrets.DYNAMODB_TABLE }}" >> $GITHUB_ENV
+          echo "TF_VAR_snowflake_user=${{ secrets.SNOWFLAKE_USER }}" >> $GITHUB_ENV
+          echo "TF_VAR_snowflake_password=${{ secrets.SNOWFLAKE_PASSWORD }}" >> $GITHUB_ENV
+          echo "TF_VAR_snowflake_account=${{ secrets.SNOWFLAKE_ACCOUNT }}" >> $GITHUB_ENV
+          echo "TF_VAR_snowflake_warehouse=${{ secrets.SNOWFLAKE_WAREHOUSE }}" >> $GITHUB_ENV
+          echo "TF_VAR_snowflake_database=${{ secrets.SNOWFLAKE_DATABASE }}" >> $GITHUB_ENV
+          echo "TF_VAR_snowflake_schema=${{ secrets.SNOWFLAKE_SCHEMA }}" >> $GITHUB_ENV
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Initialize Terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: terraform init
+        working-directory: terraform
+
+      - name: Apply Terraform Configuration
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: terraform apply -auto-approve
+        working-directory: terraform

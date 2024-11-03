@@ -1,0 +1,84 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+	  {
+		"Effect": "Allow",
+		"Action": [
+		  "ecr:Get*",
+		  "ecr:Batch*",
+		  "ecr:Create*",
+		  "ecr:Delete*",
+		  "ecr:Describe*",
+		  "ecr:List*",
+		  "ecr:Initiate*",
+		  "ecr:Upload*",
+		  "ecr:Complete*",
+		  "ecr:Put*"
+		],
+		"Resource": "*"
+	  },
+	  {
+		"Effect": "Allow",
+		"Action": [
+		  "ecs:Create*",
+		  "ecs:Register*",
+		  "ecs:Update*",
+		  "ecs:Describe*",
+		  "ecs:List*",
+		  "ecs:Delete*",
+		  "ecs:Deregister*",
+		  "ecs:TagResource",
+		  "ecs:UntagResource",
+		  "application-autoscaling:Register*",
+		  "application-autoscaling:Deregister*",
+		  "application-autoscaling:Describe*",
+		  "application-autoscaling:List*",
+		  "application-autoscaling:Put*",
+		  "application-autoscaling:Delete*"
+		],
+		"Resource": "*"
+	  },
+	  {
+		"Effect": "Allow",
+		"Action": [
+		  "s3:*Object",
+		  "s3:*Bucket"
+		],
+		"Resource": "arn:aws:s3:::market-dashboard-terraform-state-*"
+	  },
+	  {
+		"Effect": "Allow",
+		"Action": [
+		  "dynamodb:*Item",
+		  "dynamodb:*Table"
+		],
+		"Resource": "arn:aws:dynamodb:*:*:table/market_dashboard_terraform_lock"
+	  },
+	  {
+		"Effect": "Allow",
+		"Action": [
+		  "iam:Create*",
+		  "iam:Attach*",
+		  "iam:PassRole",
+		  "iam:Put*",
+		  "iam:Tag*",
+		  "iam:Get*",
+		  "iam:List*",
+		  "iam:Detach*",
+		  "iam:Delete*"
+		],
+		"Resource": "*"
+	  },
+	  {
+		"Effect": "Allow",
+		"Action": [
+		  "ec2:Create*",
+		  "ec2:Delete*",
+		  "ec2:Describe*",
+		  "ec2:Authorize*"
+		],
+		"Resource": "*"
+	  }
+	]
+  }
+  

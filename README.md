@@ -1,110 +1,121 @@
-# Market Dashboard Deployment
+# Market Dashboard Deployment Guide
 
-## Project Structure
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Pre-requisites](#pre-requisites)
+3. [Initial Setup](#initial-setup)
+4. [Creating CI/CD User and Network Infrastructure](#creating-cicd-user-and-network-infrastructure)
+5. [Setting Up GitHub Secrets](#setting-up-github-secrets)
 
-```
-market_dashboard/
-│
-├── cicd_workflows/
-│   └── deploy.yml
-├── containerization/
-│   └── Dockerfile
-├── README.md
-├── sql_scripts/
-│   └── solution.sql
-├── streamlit_app/
-│   ├── main.py
-│   ├── requirements.txt
-│   ├── utils/
-│   │   └── snowflake_utils.py
-│   └── widgets/
-│       ├── price_history.py
-│       ├── top_companies.py
-│       └── top_sectors.py
-└── terraform/
-    ├── main.tf
-    └── iam_user.tf
+## Introduction
+This guide explains how to deploy the Market Dashboard application on AWS, using Terraform for infrastructure management, Docker for containerizing the application, and GitHub Actions for CI/CD.
+
+<<local deployment>>
+Build the Docker Image: Build your Docker image from your Dockerfile.
+```bash
+docker build -t market_dashboard_app -f docker/Dockerfile .
 ```
 
-## Overview
+Fill in `.env` file with Snowflake credentials and add them as environment variables.
+```bash
+source streamlit/.env
+```
 
-The Market Dashboard is deployed on AWS using ECS, ECR, and other AWS resources. This document provides instructions for setting up the necessary AWS infrastructure, creating required secrets, and deploying the application.
+Run docker image locally for testing:
+```bash
+docker run -e SNOWFLAKE_USER=${{SNOWFLAKE_USER}} \
+            -e SNOWFLAKE_PASSWORD=${{SNOWFLAKE_PASSWORD}} \
+            -e SNOWFLAKE_ACCOUNT=${{SNOWFLAKE_ACCOUNT}} \
+            -e SNOWFLAKE_WAREHOUSE=${{SNOWFLAKE_WAREHOUSE}} \
+            -e SNOWFLAKE_DATABASE=${{SNOWFLAKE_DATABASE}} \
+            -e SNOWFLAKE_SCHEMA=${{SNOWFLAKE_SCHEMA}} \
+            -p 8501:8501 market_dashboard_app
+```
 
-### Deployment Overview
+Browse `http://localhost:8501` to view the application.
 
-The deployment of the Market Dashboard will be done in AWS. Before running the deployment, an AWS IAM user needs to be created to allow the CI/CD pipeline to interact with AWS resources such as ECS, ECR, and CloudWatch.
 
-The creation of this AWS IAM user will be done locally using Terraform. This step is required to ensure the proper permissions are assigned securely and consistently.
+<<AWS ECS deployment>>
+[Build and push image to ECR](#build-and-push-image-to-ecr)
 
-## Creating an AWS User with Terraform
+1. Build the Docker image
 
-To create an AWS IAM user for deploying the Market Dashboard, follow these steps:
+2. Log in to Amazon ECR: Log in to the Amazon ECR from your terminal. This command will allow Docker to interact with your ECR repository:
+```bash
+aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 636901251658.dkr.ecr.eu-west-1.amazonaws.com
+```
 
-1. **Install Terraform**:
-   - Follow the instructions at [https://learn.hashicorp.com/tutorials/terraform/install-cli](https://learn.hashicorp.com/tutorials/terraform/install-cli) to install Terraform.
+3. Tag the Docker Image: Tag the Docker image to point to your ECR repository.
+```bash
+docker tag market_dashboard_app:latest 636901251658.dkr.ecr.eu-west-1.amazonaws.com/market_dashboard_app:latest
+```
+(Explain which ECR repository the docker image should be pushed to.)
 
-2. **Configure AWS CLI** (optional):
-   - Make sure you have credentials configured for Terraform to authenticate with AWS.
+4. Push the Docker Image to ECR: Push the Docker image to the ECR repository.
+```bash
+docker push 636901251658.dkr.ecr.eu-west-1.amazonaws.com/market_dashboard_app:latest
+```
+
+
+
+
+## Pre-requisites
+- AWS CLI installed and configured.
+- Terraform installed.
+- AWS account with permissions to create IAM users, S3 buckets, DynamoDB tables, and network resources (VPC, subnets, security groups).
+- GitHub repository for the project.
+
+## Initial Setup
+Before deploying the solution, several infrastructure components need to be created through automated scripts to ensure that the CI/CD pipeline runs smoothly.
+
+## Creating CI/CD User and Network Infrastructure
+This step involves creating an IAM user for CI/CD, setting up the Terraform backend, and configuring the network infrastructure.
+
+1. **Run the Setup Script**:
+   - Use the `setup.sh` script to create the required infrastructure components. The script will:
+     - Create the CI/CD IAM user (`market-dashboard-user`).
+     - Create an S3 bucket for storing Terraform state.
+     - Create a DynamoDB table for Terraform state locking.
+     - Create the VPC, subnets, and security group for the application.
+
    ```bash
-   aws configure
+   ./setup.sh
    ```
 
-3. **Create the IAM User**:
-   - A Terraform script (`iam_user.tf`) is provided in the `/terraform` directory. This script creates an AWS IAM user with the necessary permissions to deploy the Market Dashboard.
-   - Navigate to the `/terraform` directory and run the following commands:
-     
-     - **Initialize Terraform**:
-       ```bash
-       terraform init
-       ```
-     
-     - **Apply Terraform**:
-       ```bash
-       terraform apply -target=aws_iam_user.market_dashboard_user
-       ```
-       This will create an `aws_credentials.txt` file containing the **AWS Access Key ID** and **AWS Secret Access Key**. These credentials should be added as GitHub Secrets for CI/CD.
+2. **IAM User for CI/CD**:
+   - The IAM user created by the script is used by GitHub Actions to deploy resources.
+   - The access keys for this user are stored in `aws_credentials.json`. Ensure these are kept secure and not committed to version control.
 
-## Adding Secrets to GitHub Repository
+3. **Network Infrastructure**:
+   - The setup script will create a VPC, subnets, and a security group. These resources are used by the ECS services deployed via Terraform.
 
-This section explains how to add secrets to your GitHub repository. Secrets are used to securely store sensitive information such as API keys, credentials, and access tokens. In this project, we use GitHub Secrets to store credentials for Snowflake and AWS, which are used for deployment and other operations.
+## Setting Up GitHub Secrets
+To enable GitHub Actions to deploy the infrastructure, the following secrets need to be configured in your GitHub repository:
 
-### Steps to Add Secrets in GitHub
+1. **AWS Credentials**:
+   - `AWS_ACCESS_KEY_ID`: The access key ID from `aws_credentials.json`.
+   - `AWS_SECRET_ACCESS_KEY`: The secret access key from `aws_credentials.json`.
+   - `AWS_REGION`: The region where the infrastructure will be deployed.
 
-1. **Navigate to Your GitHub Repository**
-   - Go to your GitHub repository (e.g., [market_dashboard](https://github.com/lunasilvestre/market_dashboard)).
+2. **Snowflake Credentials**:
+   - `SNOWFLAKE_USER`: Your Snowflake user.
+   - `SNOWFLAKE_PASSWORD`: Your Snowflake password.
+   - `SNOWFLAKE_ACCOUNT`: Your Snowflake account identifier.
+   - `SNOWFLAKE_WAREHOUSE`: The warehouse used in Snowflake.
+   - `SNOWFLAKE_DATABASE`: The database name in Snowflake.
+   - `SNOWFLAKE_SCHEMA`: The schema name in Snowflake.
 
-2. **Open Repository Settings**
-   - Click on the **Settings** tab at the top of your repository.
+3. **Network and Terraform Configuration**:
+   - `VPC_ID`: The ID of the VPC created by the setup script.
+   - `SUBNET_IDS`: Comma-separated list of subnet IDs created by the setup script.
+   - `SECURITY_GROUP_ID`: The security group ID created by the setup script.
+   - `S3_BUCKET`: The name of the S3 bucket for Terraform state.
+   - `DYNAMODB_TABLE`: The name of the DynamoDB table for Terraform state locking.
 
-3. **Access Secrets and Variables**
-   - In the left sidebar, scroll down and click on **Secrets and variables** under the **Security** section.
-   - Click on **Actions** to view the secrets used by GitHub Actions.
+To add a secret to your GitHub repository:
+1. Go to your repository on GitHub.
+2. Click on **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
+3. Add each of the above secrets one by one.
 
-4. **Add a New Secret**
-   - Click the **New repository secret** button.
-   - You will see a form where you need to add a **Name** and **Value** for the secret.
-
-5. **Define the Secrets**
-   - Add the following secrets based on your project requirements:
-
-     - **SNOWFLAKE_USER**: Your Snowflake user name.
-     - **SNOWFLAKE_PASSWORD**: The password for the Snowflake user.
-     - **SNOWFLAKE_ACCOUNT**: The account identifier for your Snowflake account.
-     - **SNOWFLAKE_WAREHOUSE**: The name of the Snowflake warehouse.
-     - **SNOWFLAKE_DATABASE**: The name of the Snowflake database.
-     - **SNOWFLAKE_SCHEMA**: The name of the Snowflake schema.
-     - **AWS_ACCESS_KEY_ID**: Your AWS access key ID.
-     - **AWS_SECRET_ACCESS_KEY**: Your AWS secret access key.
-     - **AWS_REGION**: The AWS region where the resources will be deployed.
-
-   - For each secret, provide an appropriate **Name** and **Value**, then click **Add secret**.
-
-6. **Verify Secrets**
-   - After adding, you can see a list of your secrets. The values are hidden for security purposes, but you can edit or delete them if necessary.
-
-### Important Notes
-- **Do Not Hardcode Secrets**: Never hardcode sensitive information directly in your source code. Always use secrets to protect such data.
-- **Accessing Secrets in GitHub Actions**: Once secrets are added, they can be accessed in your GitHub Actions workflows using the syntax `${{ secrets.SECRET_NAME }}`.
-- **Keep Secrets Updated**: If any credentials change, make sure to update the corresponding secret in GitHub to avoid any disruptions in the workflows.
-
-By using GitHub Secrets, you ensure that sensitive information is handled securely and is only available to workflows with the correct permissions.
+## Next Steps
+Once the initial setup is complete, proceed to deploy the Streamlit application using Terraform and GitHub Actions. Refer to the [CI/CD Pipeline Setup](#cicd-pipeline-setup) section for more details.

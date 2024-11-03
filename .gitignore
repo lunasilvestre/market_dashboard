@@ -73,6 +73,8 @@ terraform.tfstate
 terraform.tfstate.backup
 .terraform/
 aws_credentials.txt
+aws_credentials.json
+terraform.tfvars
 
 # Terraform lock file
 .terraform.lock.hcl
