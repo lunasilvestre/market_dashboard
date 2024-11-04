@@ -12,6 +12,8 @@ jobs:
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}  # Set the AWS region as an environment variable
 
     steps:
       - name: Checkout repository
@@ -22,8 +24,6 @@ jobs:
 
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
-        with:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Build Docker image
         run: |

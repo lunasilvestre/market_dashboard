@@ -179,44 +179,161 @@ After configuring the AWS CLI, run the following command to authenticate to the 
 
 ### Step 3: Application Deployment
 
-This step sets up the ECS cluster, the Fargate service, and configures the Application Load Balancer (ALB). It will also ouput the public Streamlit application URL.
+In this step, you will deploy the application to AWS using Terraform. This includes setting up the ECS cluster, Fargate service, and configuring the Application Load Balancer (ALB). Upon completion, you will receive the public URL to access the Streamlit application.
 
-#### Configure Terraform Backend
-The `application_management` Terraform project uses a cloud based backend that simplifies the collaborative development process. This backend is configured in the `terraform/application_management/backend.tf` file and a scafold for this file is provided in the `terraform/application_management` folder as `backend.tf.template`.
-This file should be renamed to `backend.tf` and populated with the required values. The values include the S3 bucket name, region, and DynamoDB table name. (In this particular case, these values need to be harcoded and can't be retrieved from Terraform outputs or environment variables.)
+#### Step 3.1: Configure the Terraform Backend
 
+The `application_management` Terraform project uses a remote backend to store the Terraform state in an S3 bucket and manage state locking with DynamoDB. This setup facilitates collaboration and ensures state consistency.
 
-#### Required Variables for Terraform
+**Instructions:**
 
-The `application_management` Terraform project requires certain variables to be defined. These variables can be set in a `terraform.tfvars` file or passed during runtime. For details on each variable, see the [`variables.tf`](terraform/application_management/variables.tf) file in the project directory.
+1. **Navigate to the Backend Configuration Directory:**
 
-Example `terraform.tfvars` file (sanitized for public sharing):
+   ```bash
+   cd terraform/application_management
+   ```
 
-```hcl
-aws_region                 = "YOUR_AWS_REGION"
-vpc_id                     = "YOUR_VPC_ID"
-subnet_ids                 = ["YOUR_SUBNET_ID_1", "YOUR_SUBNET_ID_2"]
-alb_security_group_id      = "YOUR_ALB_SECURITY_GROUP_ID"
-ecs_task_security_group_id = "YOUR_ECS_TASK_SECURITY_GROUP_ID"
-ecr_repository_name        = "YOUR_ECR_REPOSITORY_NAME"
-environment                = "YOUR_ENVIRONMENT"
-```
+2. **Rename the Backend Template File:**
 
-Make sure to replace the placeholders with your actual values before running Terraform.
+   Rename `backend.tf.template` to `backend.tf`:
 
-#### Running Terraform
-1. **Navigate to** `terraform/application_management`.
-2. **Initialize Terraform**:
+   ```bash
+   mv backend.tf.template backend.tf
+   ```
+
+3. **Edit the `backend.tf` File:**
+
+   Open `backend.tf` in a text editor and populate it with your backend configuration:
+
+   ```hcl
+   terraform {
+     backend "s3" {
+       bucket         = "YOUR_S3_BUCKET_NAME"
+       key            = "YOUR_TERRAFORM_STATE_KEY"
+       region         = "YOUR_AWS_REGION"
+       dynamodb_table = "YOUR_DYNAMODB_TABLE_NAME"
+     }
+   }
+   ```
+
+   Replace the placeholders with your actual values:
+
+   - `bucket`: The S3 bucket name created in **Step 1** for storing Terraform state.
+   - `key`: A unique path within the bucket for the state file (e.g., `"application_management/terraform.tfstate"`).
+   - `region`: Your AWS region (e.g., `"us-west-2"`).
+   - `dynamodb_table`: The DynamoDB table name created in **Step 1** for state locking.
+
+   **Note:** These values must be hardcoded in the `backend.tf` file and cannot be retrieved from Terraform outputs or environment variables.
+
+#### Step 3.2: Define Required Terraform Variables
+
+Before running Terraform, you need to specify certain variables required by the `application_management` project.
+
+**Instructions:**
+
+1. **Create a `terraform.tfvars` File:**
+
+   In the `terraform/application_management` directory, create a file named `terraform.tfvars`.
+
+2. **Populate the `terraform.tfvars` File:**
+
+   ```hcl
+   aws_region                 = "YOUR_AWS_REGION"
+   vpc_id                     = "YOUR_VPC_ID"
+   subnet_ids                 = ["YOUR_SUBNET_ID_1", "YOUR_SUBNET_ID_2"]
+   alb_security_group_id      = "YOUR_ALB_SECURITY_GROUP_ID"
+   ecs_task_security_group_id = "YOUR_ECS_TASK_SECURITY_GROUP_ID"
+   ecr_repository_name        = "YOUR_ECR_REPOSITORY_NAME"
+   environment                = "YOUR_ENVIRONMENT"
+   ```
+
+   Replace the placeholders with your actual values:
+
+   - `aws_region`: The AWS region for deployment (e.g., `"us-west-2"`).
+   - `vpc_id`: The VPC ID created in **Step 1**.
+   - `subnet_ids`: A list of subnet IDs within the VPC (obtain from **Step 1** outputs).
+   - `alb_security_group_id`: The security group ID for the Application Load Balancer.
+   - `ecs_task_security_group_id`: The security group ID for ECS tasks.
+   - `ecr_repository_name`: The name of the ECR repository containing your Docker image.
+   - `environment`: An identifier for the deployment environment (e.g., `"production"`).
+
+   **Tip:** The values for `vpc_id`, `subnet_ids`, `alb_security_group_id`, and `ecs_task_security_group_id` can be found in the Terraform outputs from **Step 1**. Ensure you have these outputs handy.
+
+#### Step 3.3: Deploy the Application Using Terraform
+
+With the backend configured and variables defined, you're ready to deploy the application.
+
+**Instructions:**
+
+1. **Navigate to the Terraform Project Directory (if not already there):**
+
+   ```bash
+   cd terraform/application_management
+   ```
+
+2. **Initialize Terraform:**
 
    ```bash
    terraform init
    ```
 
-3. **Apply the Terraform Configuration**:
+   This command initializes the project and connects to the remote backend you configured.
+
+3. **Validate the Terraform Configuration (Optional):**
+
+   ```bash
+   terraform validate
+   ```
+
+   This step checks that your configuration files are syntactically valid and internally consistent.
+
+4. **Preview the Terraform Execution Plan (Optional but Recommended):**
+
+   ```bash
+   terraform plan -out=tfplan
+   ```
+
+   Review the plan output to understand what resources will be created or modified.
+
+5. **Apply the Terraform Configuration:**
 
    ```bash
    terraform apply -auto-approve
    ```
+
+   This command will deploy the ECS cluster, Fargate service, and ALB, and will start the application.
+
+6. **Retrieve the Application URL:**
+
+   After the deployment completes, Terraform will output the `market_dashboard_url`. This is the URL to access your deployed Streamlit application via the Application Load Balancer.
+
+   **Example URL:**
+
+   ```
+   http://market-dashboard-alb-<unique-id>.<aws-region>.elb.amazonaws.com/
+   ```
+
+   **Note:** It may take a few minutes for the ALB to become fully operational after deployment. If the URL does not work immediately, please wait a few minutes and try again.
+
+#### Additional Notes and Tips
+
+- **Security Groups:** Ensure that the security groups associated with the ALB and ECS tasks allow the necessary inbound and outbound traffic. For the ALB, inbound HTTP traffic on port 80 should be allowed.
+
+- **Environment Variables:** Confirm that all necessary environment variables (e.g., Snowflake credentials) are correctly configured and accessible by the ECS tasks. These should be defined in your Terraform configuration or passed securely.
+
+- **Logging and Monitoring:** CloudWatch logs can help you troubleshoot any issues with the ECS tasks. Ensure that the ECS task execution role has the appropriate permissions to write logs to CloudWatch.
+
+- **Resource Cleanup:** If you need to tear down the infrastructure, you can run:
+
+  ```bash
+  terraform destroy -auto-approve
+  ```
+
+  **Warning:** This will delete all resources created by Terraform. Use with caution.
+
+#### Summary
+
+By completing this step, you have successfully deployed the Market Dashboard application to AWS using ECS Fargate and Terraform. The application is accessible via the public URL provided by the ALB. Proceed to the next sections to set up CI/CD pipelines, monitor your application, and consider further optimizations.
 
 ## Accessing the Application
 
