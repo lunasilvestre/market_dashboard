@@ -72,8 +72,7 @@ htmlcov/
 terraform.tfstate
 terraform.tfstate.backup
 .terraform/
-aws_credentials.txt
-aws_credentials.json
+backend.tf
 terraform.tfvars
 
 # Terraform lock file

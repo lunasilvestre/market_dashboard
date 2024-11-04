@@ -38,8 +38,14 @@ variable "subnet_ids" {
   default     = []
 }
 
-variable "security_group_id" {
+variable "ecs_task_security_group_id" {
   description = "Security Group ID for ECS tasks"
+  type        = string
+  default     = null
+}
+
+variable "alb_security_group_id" {
+  description = "Security Group ID for ALB"
   type        = string
   default     = null
 }
@@ -90,4 +96,9 @@ variable "dynamodb_table" {
   description = "DynamoDB table for Terraform state locking"
   type        = string
   default     = null
+}
+
+variable "cloudwatch_log_group_name" {
+  description = "CloudWatch Log Group Name for ECS tasks"
+  type        = string
 }

@@ -1,0 +1,6 @@
+aws_region          = "YOUR_AWS_REGION"
+ci_cd_user_name     = "YOUR_CI_CD_USER_NAME"
+s3_bucket_name      = "YOUR_S3_BUCKET_NAME"
+dynamodb_table_name = "YOUR_DYNAMODB_TABLE_NAME"
+ecr_repository_name = "YOUR_ECR_REPOSITORY_NAME"
+environment         = "Production"

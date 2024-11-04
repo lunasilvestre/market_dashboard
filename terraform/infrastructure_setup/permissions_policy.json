@@ -52,7 +52,7 @@
 		  "dynamodb:*Item",
 		  "dynamodb:*Table"
 		],
-		"Resource": "arn:aws:dynamodb:*:*:table/market_dashboard_terraform_lock"
+		"Resource": "arn:aws:dynamodb:*:*:table/market-dashboard-terraform-lock"
 	  },
 	  {
 		"Effect": "Allow",
@@ -76,6 +76,20 @@
 		  "ec2:Delete*",
 		  "ec2:Describe*",
 		  "ec2:Authorize*"
+		],
+		"Resource": "*"
+	  },
+	  {
+		"Effect": "Allow",
+		"Action": [
+		  "elasticloadbalancing:Create*",
+		  "elasticloadbalancing:Delete*",
+		  "elasticloadbalancing:Describe*",
+		  "elasticloadbalancing:Modify*",
+		  "elasticloadbalancing:RegisterTargets",
+		  "elasticloadbalancing:DeregisterTargets",
+		  "elasticloadbalancing:AddTags",
+		  "elasticloadbalancing:RemoveTags"
 		],
 		"Resource": "*"
 	  }

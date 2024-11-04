@@ -23,7 +23,7 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          region: ${{ secrets.AWS_REGION }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Build Docker image
         run: |
@@ -90,7 +90,8 @@ jobs:
           echo "TF_VAR_aws_region=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
           echo "TF_VAR_vpc_id=${{ secrets.VPC_ID }}" >> $GITHUB_ENV
           echo "TF_VAR_subnet_ids=${{ secrets.SUBNET_IDS }}" >> $GITHUB_ENV
-          echo "TF_VAR_security_group_id=${{ secrets.SECURITY_GROUP_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_alb_security_group_id=${{ secrets.ALB_SECURITY_GROUP_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_ecs_task_security_group_id=${{ secrets.ECS_TASK_SECURITY_GROUP_ID }}" >> $GITHUB_ENV
           echo "TF_VAR_s3_bucket=${{ secrets.S3_BUCKET }}" >> $GITHUB_ENV
           echo "TF_VAR_dynamodb_table=${{ secrets.DYNAMODB_TABLE }}" >> $GITHUB_ENV
           echo "TF_VAR_snowflake_user=${{ secrets.SNOWFLAKE_USER }}" >> $GITHUB_ENV

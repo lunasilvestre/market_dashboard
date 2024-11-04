@@ -81,7 +81,7 @@ resource "aws_ecs_task_definition" "market_dashboard_task" {
       logConfiguration = {  # Configuring logs to send container output to CloudWatch
         logDriver = "awslogs"
         options = {
-          awslogs-group         = "/ecs/market_dashboard_app"  # CloudWatch log group
+          awslogs-group         = var.cloudwatch_log_group_name  # CloudWatch log group
           awslogs-region        = var.aws_region  # Region for CloudWatch logs
           awslogs-stream-prefix = "ecs"  # Stream prefix for CloudWatch logs
         }
@@ -97,26 +97,33 @@ resource "aws_ecs_task_definition" "market_dashboard_task" {
 }
 
 # Define ECS Fargate Service to run the ECS Task Definition
-resource "aws_ecs_service" "market_dashboard_service" {
-  name            = "market_dashboard_service"
-  cluster         = aws_ecs_cluster.market_dashboard_cluster.id  # Cluster to run the service in
-  task_definition = aws_ecs_task_definition.market_dashboard_task.arn  # Task definition for the service
-  launch_type     = "FARGATE"  # Launch using Fargate
+# resource "aws_ecs_service" "market_dashboard_service" {
+#   name            = "market_dashboard_service"
+#   cluster         = aws_ecs_cluster.market_dashboard_cluster.id  # Cluster to run the service in
+#   task_definition = aws_ecs_task_definition.market_dashboard_task.arn  # Task definition for the service
+#   launch_type     = "FARGATE"  # Launch using Fargate
 
-  network_configuration {
-    subnets         = var.subnet_ids  # Subnets for the service
-    security_groups = [var.security_group_id]  # Security group for the service
-    assign_public_ip = true  # Assign a public IP to the task
-  }
+#   network_configuration {
+#     subnets         = var.subnet_ids  # Subnets for the service
+#     security_groups = [var.security_group_id]  # Security group for the service
+#     assign_public_ip = true  # Assign a public IP to the task
+#   }
 
-  desired_count = 1  # Number of tasks to run in the service
 
-  tags = {
-    Project     = "MarketDashboard"
-    Environment = var.environment  # Environment tag
-    ManagedBy   = "Terraform"  # Indicates Terraform is managing this resource
-  }
-}
+#   load_balancer {
+#     target_group_arn = aws_lb_target_group.market_dashboard_tg.arn
+#     container_name   = "market_dashboard_app"
+#     container_port   = 8501
+#   }
+
+#   desired_count = 1  # Number of tasks to run in the service
+
+#   tags = {
+#     Project     = "MarketDashboard"
+#     Environment = var.environment  # Environment tag
+#     ManagedBy   = "Terraform"  # Indicates Terraform is managing this resource
+#   }
+# }
 
 # Define Autoscaling Target for ECS Fargate Service
 resource "aws_appautoscaling_target" "ecs_target" {
@@ -167,4 +174,90 @@ resource "aws_appautoscaling_policy" "ecs_scale_down" {
       scaling_adjustment          = -1  # Number of tasks to remove
     }
   }
+}
+
+
+resource "aws_lb" "market_dashboard_lb" {
+  name               = "market-dashboard-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [var.alb_security_group_id]
+  subnets            = var.subnet_ids
+
+  tags = {
+    Project     = "MarketDashboard"
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
+}
+
+
+resource "aws_lb_target_group" "market_dashboard_tg" {
+  name     = "market-dashboard-tg"
+  port     = 8501
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+
+  tags = {
+    Project     = "MarketDashboard"
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
+}
+
+
+resource "aws_lb_listener" "market_dashboard_listener_http" {
+  load_balancer_arn = aws_lb.market_dashboard_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.market_dashboard_tg.arn
+  }
+}
+
+
+resource "aws_ecs_service" "market_dashboard_service" {
+  name            = "market_dashboard_service"
+  cluster         = aws_ecs_cluster.market_dashboard_cluster.id
+  task_definition = aws_ecs_task_definition.market_dashboard_task.arn
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = var.subnet_ids
+    security_groups = [var.ecs_task_security_group_id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.market_dashboard_tg.arn
+    container_name   = "market_dashboard_app"
+    container_port   = 8501
+  }
+
+  desired_count = 1
+
+  tags = {
+    Project     = "MarketDashboard"
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
+}
+
+
+output "market_dashboard_url" {
+  value       = aws_lb.market_dashboard_lb.dns_name
+  description = "The URL of the Market Dashboard application."
 }

@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket         = "market-dashboard-terraform-state-1730223462"
-    key            = "terraform.tfstate"
+    bucket         = "market-dashboard-terraform-state-1"
+    key            = "market_dashboard/application_management/terraform.tfstate"
     region         = "eu-west-1"
-    dynamodb_table = "market_dashboard_terraform_lock"
+    dynamodb_table = "market-dashboard-terraform-lock"
   }
 }
