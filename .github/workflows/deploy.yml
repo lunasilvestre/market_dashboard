@@ -73,7 +73,8 @@ jobs:
           cursor = conn.cursor()
           with open('sql/ddl.sql', 'r') as f:
               ddl = f.read()
-          cursor.execute(ddl, multi=True)
+          for result in cursor.execute_string(ddl):
+              print(result)
           cursor.close()
           conn.close()
           EOF
@@ -103,19 +104,17 @@ jobs:
           echo "TF_VAR_snowflake_database=${{ secrets.SNOWFLAKE_DATABASE }}" >> $GITHUB_ENV
           echo "TF_VAR_snowflake_schema=${{ secrets.SNOWFLAKE_SCHEMA }}" >> $GITHUB_ENV
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v1
-
-      - name: Initialize Terraform
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: terraform init
-        working-directory: terraform
-
-      - name: Apply Terraform Configuration
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: terraform apply -auto-approve
-        working-directory: terraform
+          - name: Initialize Terraform
+          working-directory: terraform/application_management
+          env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          run: terraform init
+        
+          - name: Apply Terraform Configuration
+            working-directory: terraform/application_management
+            env:
+              AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+              AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            run: terraform apply -auto-approve
+        

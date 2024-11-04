@@ -75,7 +75,8 @@ conn = snowflake.connector.connect(
 cursor = conn.cursor()
 with open('sql/ddl.sql', 'r') as f:
    ddl = f.read()
-cursor.execute(ddl, multi=True)
+for result in cursor.execute_string(ddl):
+   print(result)
 cursor.close()
 conn.close()
 EOF
@@ -235,8 +236,8 @@ The `application_management` Terraform project uses a remote backend to store th
    Replace the placeholders with your actual values:
 
    - `bucket`: The S3 bucket name created in **Step 1** for storing Terraform state.
-   - `key`: A unique path within the bucket for the state file (e.g., `"application_management/terraform.tfstate"`).
-   - `region`: Your AWS region (e.g., `"us-west-2"`).
+   - `key`: A unique path within the bucket for the state file (e.g., `"market_dashboard/application_management/terraform.tfstate"`).
+   - `region`: Your AWS region (e.g., `"eu-west-1"`).
    - `dynamodb_table`: The DynamoDB table name created in **Step 1** for state locking.
 
    **Note:** These values must be hardcoded in the `backend.tf` file and cannot be retrieved from Terraform outputs or environment variables.
