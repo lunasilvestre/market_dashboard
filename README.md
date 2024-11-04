@@ -75,7 +75,7 @@ conn = snowflake.connector.connect(
 cursor = conn.cursor()
 with open('sql/ddl.sql', 'r') as f:
    ddl = f.read()
-cursor.execute(ddl)
+cursor.execute(ddl, multi=True)
 cursor.close()
 conn.close()
 EOF
