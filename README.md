@@ -334,11 +334,9 @@ With the backend configured and variables defined, you're ready to deploy the ap
 
 #### Additional Notes and Tips
 
-- **Security Groups**: Ensure that the security groups associated with the ALB and ECS tasks allow the necessary inbound and outbound traffic. For the ALB, inbound HTTP traffic on port 80 should be allowed.
-
 - **Environment Variables**: Confirm that all necessary environment variables (e.g., Snowflake credentials) are correctly configured and accessible by the ECS tasks. These should be defined in your Terraform configuration or passed securely.
 
-- **Logging and Monitoring**: CloudWatch logs can help you troubleshoot any issues with the ECS tasks. Ensure that the ECS task execution role has the appropriate permissions to write logs to CloudWatch.
+- **Logging and Monitoring**: CloudWatch logs can help you troubleshoot any issues with the ECS tasks. Check the 'ecs/market_dashboard_app' log groups in CloudWatch for detailed information about the dashboard usage.
 
 - **Resource Cleanup**: If you need to tear down the infrastructure, you can run:
 
@@ -404,17 +402,4 @@ Once the deployment is complete, you will be provided with a URL to access the M
 http://market-dashboard-alb-<unique-id>.<aws-region>.elb.amazonaws.com/
 ```
 
-## Troubleshooting and Tips
-
-- **Application Load Balancer Issues**: Ensure that the security groups allow inbound traffic on port 80.
-- **CloudWatch Logs**: The CloudWatch log group should be created before deploying the ECS service to ensure logging works correctly. Check the ECS task role for appropriate permissions to publish logs to CloudWatch if logs are not appearing.
-- **Environment Variables**: Ensure all Snowflake credentials are correctly configured and passed to the ECS tasks.
-
-## Next Steps
-
-Now that your infrastructure and application are set up, consider:
-
-- Optimizing autoscaling policies.
-- Improving CI/CD workflows.
-- Monitoring the application to ensure reliability.
 
