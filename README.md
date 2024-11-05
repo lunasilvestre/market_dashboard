@@ -26,8 +26,6 @@
      - [Summary](#summary)
 5. [Accessing the Application](#accessing-the-application)
 6. [CI/CD Setup](#cicd-setup)
-7. [Troubleshooting and Tips](#troubleshooting-and-tips)
-8. [Next Steps](#next-steps)
 
 ## Introduction
 
